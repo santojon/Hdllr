@@ -128,7 +128,7 @@ class Hdllr {
     /**
      * Observe all page content
      */
-    observeAll() {
+    static observeAll() {
         // get all except script and code
         var elements = document.body.getElementsByTagName('*')
         
