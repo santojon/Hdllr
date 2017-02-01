@@ -1,6 +1,18 @@
+/**
+ * Class responsible to listen, observe and secure the page
+ */
 class Hdllr {
+    /**
+     * Instantiate a new Hdllr
+     */
     constructor(el, crypt) {
         this.el = el
+        this._mind = {
+            vocabulary: {
+                words: [],
+                expressions: []
+            }
+        }
         this.crypt = crypt || window.crypto
         this._crypt = crypt.subtle
 
@@ -16,7 +28,12 @@ class Hdllr {
         }
     }
 
-    observe(ev, func) {
+    /**
+     * Listen everything in the page
+     * @param ev: the event to listen
+     * @param func: what to do when listen
+     */
+    listen(ev, func) {
         var _ob = (ev) => {
             console.log(ev)
         }
@@ -24,20 +41,94 @@ class Hdllr {
         if (ev) {
             this.el.addEventListener(ev, func || _ob)
         } else {
-            this.el.addEventListener('click', func || _ob)
-            this.el.addEventListener('mouseover', func || _ob)
+            [
+                'click',
+                'mouseover'/*,
+                'mouseout',
+                'drag',
+                'drop',
+                'DOMSubtreeModified'*/
+            ].forEach((e) => {
+                this.el.addEventListener(e, func || _ob)
+            })
         }
     }
 
-    initAes() {
-        return _crypt.generateKey(this.aes_k, true, ["encrypt", "decrypt"])
+    /**
+     * Observes everything in the page
+     * @param ev: the event to observe
+     * @param func: what to do when observe
+     */
+    observe(ev, func) {
+        this.listen(ev, func || ((ev) => {
+            var text = []
+            var allTxt = []
+            var current = ev.target
+            // Check the element has no children && that it is not empty
+            if (current.children.length === 0 &&
+                current.textContent.replace(/ |\n\r/g, '') !== '') {
+
+                // get it only if is not a script or code block
+                if (current.outerHTML.indexOf('<script') < 0) {
+                    var txt = current.textContent
+                    allTxt.push(txt)
+                }
+            }
+
+            // prepare texts to classify
+            for (i = 0; i < allTxt.length; i++) {
+                var resultList = allTxt[i]
+                    .split(/[\,\.\!\\\/\;\?\'\"\@\#\$\%\&\*\(\)\-\_\=\+\^\~\]\[\{\}\:\>\<]+/)
+                    .filter(function (val) {
+                        return val.match(/([A-Za-z])\w+/g)
+                    })
+
+                for (j = 0; j < resultList.length; j++) {
+                    if (resultList[j].trim().length < 21) {
+                        text.push(resultList[j].trim())
+                    }
+                }
+            }
+
+            // put texts in right places
+            for (i = 0; i < text.length; i++) {
+                if (text[i].split(/\s/).length > 1) {
+                    this._mind.vocabulary.expressions.push(text[i])
+                    text[i].split(/\s/).forEach(function (s) {
+                        this._mind.vocabulary.words.push(s)
+                    });
+                } else {
+                    this._mind.vocabulary.words.push(text[i])
+                }
+            }
+        }))
     }
 
-    aesCrypt(data) {
-        return
+    /**
+     * Listen everything in the page
+     * @param ev: the event to listen
+     * @param func: what to do when listen
+     */
+    static listenAll(ev, func) {
+        // get all except script and code
+        var elements = document.body.getElementsByTagName('*')
+        
+        for(var i = 0; i < elements.length; i++) {
+            var current = elements[i]
+            // Check the element has no children
+            if(current.children.length === 0) {
+                // get it only if is not a script block
+                if (current.outerHTML.indexOf('<script') < 0) {
+                    current.listen(ev, func)
+                }
+            }
+        }
     }
 
-    static observeAll(ev, func) {
+    /**
+     * Observe all page content
+     */
+    observeAll() {
         // get all except script and code
         var elements = document.body.getElementsByTagName('*')
         
@@ -52,11 +143,33 @@ class Hdllr {
             }
         }
     }
+
+    /**
+     * Generate new AES encryption key
+     */
+    initAes() {
+        return _crypt.generateKey(this.aes_k, true, ["encrypt", "decrypt"])
+    }
+
+    /**
+     * Encrypt data using AES encryption
+     */
+    aesCrypt(data) {
+        return
+    }
 }
 
 (() => {
+    Node.prototype.listen = (ev, func) => {
+        new Hdllr(this).listen(ev, func)
+    }
+
     Node.prototype.observe = (ev, func) => {
         new Hdllr(this).observe(ev, func)
+    }
+
+    Node.listenAll = (func, ev) => {
+        Hdllr.listenAll(ev, func)
     }
 
     Node.observeAll = (func, ev) => {
