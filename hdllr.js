@@ -4,6 +4,8 @@
 class Hdllr {
     /**
      * Instantiate a new Hdllr
+     * @param el: elemt to attach it in order to listen
+     * @param crypt: an encryption object
      */
     constructor(el, crypt) {
         this.el = el
@@ -28,6 +30,9 @@ class Hdllr {
         }
     }
 
+    /**
+     * Crypt related
+     */
     get counter() {
         return new Uint8Array(16)
     }
@@ -59,7 +64,7 @@ class Hdllr {
     }
 
     /**
-     * Observes everything in the page
+     * Observes everything in the current element
      * @param current: the element to be observed
      */
     observe(current) {
@@ -144,7 +149,7 @@ class Hdllr {
     /**
      * Try to generate new AES encryption key
      */
-    initAes(then) {
+    initCrypt(then) {
         this._crypt.generateKey(
             this.aes_k,
             false,
@@ -158,7 +163,7 @@ class Hdllr {
     /**
      * Encrypt data using AES encryption
      */
-    aesCrypt(data, then) {
+    encrypt(data, then) {
         if (this._key) {
             this._crypt.encrypt(
                 this.aes,
@@ -168,7 +173,7 @@ class Hdllr {
                 if (then) then(enc)
             })
         } else {
-            this.initAes((key) => {
+            this.initCrypt((key) => {
                 this._crypt.encrypt(
                     this.aes,
                     key,
@@ -183,7 +188,7 @@ class Hdllr {
     /**
      * Decrypt data using AES encryption
      */
-    aesDecrypt(data, then) {
+    decrypt(data, then) {
         if (this._key) {
             this._crypt.decrypt(
                 this.aes,
@@ -197,6 +202,9 @@ class Hdllr {
 }
 
 (() => {
+    // Export to container workspace
+    this.Hdllr = Hdllr
+
     Node.prototype.listen = (ev, func) => {
         new Hdllr(this).listen(ev, func)
     }
